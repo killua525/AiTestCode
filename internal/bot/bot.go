@@ -204,16 +204,16 @@ func mainMenuText() string {
 func mainReplyKeyboard() tgbotapi.ReplyKeyboardMarkup {
 	keyboard := tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/status"),
-			tgbotapi.NewKeyboardButton("/monitor"),
-			tgbotapi.NewKeyboardButton("/ops"),
+			tgbotapi.NewKeyboardButton("/status 📊"),
+			tgbotapi.NewKeyboardButton("/monitor 📈"),
+			tgbotapi.NewKeyboardButton("/ops 🛠️"),
 		),
 		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/install_tools"),
-			tgbotapi.NewKeyboardButton("/list_tools"),
+			tgbotapi.NewKeyboardButton("/install_tools 📦"),
+			tgbotapi.NewKeyboardButton("/list_tools 📋"),
 		),
 		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/help"),
+			tgbotapi.NewKeyboardButton("/help ❓"),
 		),
 	)
 	keyboard.ResizeKeyboard = true

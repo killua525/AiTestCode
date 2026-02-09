@@ -1,0 +1,11 @@
+# Binaries
+*.exe
+*.out
+*.bin
+
+# Local env
+.env
+
+# OS
+.DS_Store
+Thumbs.db

@@ -25,6 +25,17 @@ func InstallBaseTools() (string, error) {
 	return runCommands(cmds)
 }
 
+func UninstallBaseTools() (string, error) {
+	if os.Geteuid() != 0 {
+		return "", errors.New("must run as root")
+	}
+
+	cmds := [][]string{
+		append([]string{"apt-get", "remove", "-y"}, BaseTools()...),
+	}
+	return runCommands(cmds)
+}
+
 func BaseTools() []string {
 	return []string{"vim", "curl", "htop"}
 }

@@ -4,7 +4,7 @@ This project is a Telegram bot for basic VPS operations and monitoring. It is in
 
 Key features:
 - Status monitoring: CPU, memory, disk, uptime
-- Common ops: install base tools (vim/curl/htop)
+- Common ops: install/uninstall base tools (vim/curl/htop)
 - Menu UI: separate Monitoring and Ops panels
 - Admin-only access using chat ID
 

@@ -63,21 +63,31 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 	text := strings.TrimSpace(message.Text)
 	switch {
 	case strings.HasPrefix(text, "/start"):
-		b.replyWithRemoveKeyboard(message.Chat.ID, mainMenuText(), message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, mainMenuText(), mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/help"):
-		b.replyWithRemoveKeyboard(message.Chat.ID, helpText(), message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, helpText(), mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/monitor"):
-		b.replyWithRemoveKeyboard(message.Chat.ID, "*监控概览*", message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, "*监控概览*", mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/ops"):
-		b.replyWithRemoveKeyboard(message.Chat.ID, "*运维面板*", message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, "*运维面板*", opsReplyKeyboard(), message.MessageID)
+	case strings.HasPrefix(text, "/install"):
+		b.replyWithKeyboard(message.Chat.ID, "*安装工具*", installReplyKeyboard(), message.MessageID)
+	case strings.HasPrefix(text, "/uninstall"):
+		b.replyWithKeyboard(message.Chat.ID, "*卸载工具*", uninstallReplyKeyboard(), message.MessageID)
+	case strings.HasPrefix(text, "/back"):
+		b.replyWithKeyboard(message.Chat.ID, "*主菜单*", mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/status"):
 		b.handleStatus(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/install_tools"):
 		b.handleInstallTools(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/list_tools"):
 		b.handleListTools(message.Chat.ID, message.MessageID)
+	case strings.HasPrefix(text, "/uninstall_tools"):
+		b.handleUninstallTools(message.Chat.ID, message.MessageID)
+	case strings.HasPrefix(text, "/list_uninstall"):
+		b.handleListUninstallTools(message.Chat.ID, message.MessageID)
 	default:
-		b.replyWithRemoveKeyboard(message.Chat.ID, "Unknown command. Use /help", message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, "Unknown command. Use /help", mainReplyKeyboard(), message.MessageID)
 	}
 }
 
@@ -99,13 +109,13 @@ func (b *Bot) reply(chatID int64, text string, replyTo int) {
 	}
 }
 
-func (b *Bot) replyWithRemoveKeyboard(chatID int64, text string, replyTo int) {
+func (b *Bot) replyWithKeyboard(chatID int64, text string, keyboard tgbotapi.ReplyKeyboardMarkup, replyTo int) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
 	if replyTo > 0 {
 		msg.ReplyToMessageID = replyTo
 	}
-	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+	msg.ReplyMarkup = keyboard
 	if _, err := b.api.Send(msg); err != nil {
 		b.logger.Printf("send message error: %v", err)
 	}
@@ -183,14 +193,41 @@ func (b *Bot) handleListTools(chatID int64, replyTo int) {
 	b.reply(chatID, fmt.Sprintf("Base tools: %s", strings.Join(tools, ", ")), replyTo)
 }
 
+func (b *Bot) handleUninstallTools(chatID int64, replyTo int) {
+	tools := strings.Join(ops.BaseTools(), ", ")
+	if tools == "" {
+		tools = "(empty)"
+	}
+	b.reply(chatID, fmt.Sprintf("Uninstalling base tools: %s", tools), replyTo)
+	out, err := ops.UninstallBaseTools()
+	if err != nil {
+		b.reply(chatID, fmt.Sprintf("Uninstall failed: %v\n%s", err, out), replyTo)
+		return
+	}
+	b.reply(chatID, "Uninstall finished.", replyTo)
+}
+
+func (b *Bot) handleListUninstallTools(chatID int64, replyTo int) {
+	tools := ops.BaseTools()
+	if len(tools) == 0 {
+		b.reply(chatID, "Uninstall tools list is empty.", replyTo)
+		return
+	}
+	b.reply(chatID, fmt.Sprintf("Uninstall tools: %s", strings.Join(tools, ", ")), replyTo)
+}
+
 func helpText() string {
 	return strings.Join([]string{
 		"*VPS Bot Commands*",
 		"/monitor - monitoring panel",
 		"/ops - ops panel",
 		"/status - summary status",
-		"/install_tools - install vim/curl/htop",
-		"/list_tools - show base tools list",
+		"/install - install menu",
+		"/uninstall - uninstall menu",
+		"/install_tools - install base tools",
+		"/list_tools - show install tools list",
+		"/uninstall_tools - uninstall base tools",
+		"/list_uninstall - show uninstall tools list",
 	}, "\n")
 }
 
@@ -199,4 +236,65 @@ func mainMenuText() string {
 		"*VPS 管理机器人*",
 		"请选择功能模块：",
 	}, "\n")
+}
+
+func mainReplyKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/status 📊"),
+			tgbotapi.NewKeyboardButton("/monitor 📈"),
+			tgbotapi.NewKeyboardButton("/ops 🛠️"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/help ❓"),
+		),
+	)
+	keyboard.ResizeKeyboard = true
+	keyboard.OneTimeKeyboard = false
+	return keyboard
+}
+
+func opsReplyKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/install 📦"),
+			tgbotapi.NewKeyboardButton("/uninstall 🗑️"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/back ⬅️"),
+		),
+	)
+	keyboard.ResizeKeyboard = true
+	keyboard.OneTimeKeyboard = false
+	return keyboard
+}
+
+func installReplyKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/install_tools ✅"),
+			tgbotapi.NewKeyboardButton("/list_tools 📋"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/back ⬅️"),
+		),
+	)
+	keyboard.ResizeKeyboard = true
+	keyboard.OneTimeKeyboard = false
+	return keyboard
+}
+
+func uninstallReplyKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/uninstall_tools 🗑️"),
+			tgbotapi.NewKeyboardButton("/list_uninstall 📋"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/back ⬅️"),
+		),
+	)
+	keyboard.ResizeKeyboard = true
+	keyboard.OneTimeKeyboard = false
+	return keyboard
 }

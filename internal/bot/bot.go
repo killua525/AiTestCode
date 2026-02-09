@@ -67,7 +67,7 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 	case strings.HasPrefix(text, "/help"):
 		b.replyWithKeyboard(message.Chat.ID, helpText(), mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/monitor"):
-		b.replyWithKeyboard(message.Chat.ID, "*监控概览*", mainReplyKeyboard(), message.MessageID)
+		b.handleStatus(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/ops"):
 		b.replyWithKeyboard(message.Chat.ID, "*运维面板*", opsReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/install"):
@@ -76,8 +76,6 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 		b.replyWithKeyboard(message.Chat.ID, "*卸载工具*", uninstallReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/back"):
 		b.replyWithKeyboard(message.Chat.ID, "*主菜单*", mainReplyKeyboard(), message.MessageID)
-	case strings.HasPrefix(text, "/status"):
-		b.handleStatus(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/install_tools"):
 		b.handleInstallTools(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/list_tools"):
@@ -221,7 +219,6 @@ func helpText() string {
 		"*VPS Bot Commands*",
 		"/monitor - monitoring panel",
 		"/ops - ops panel",
-		"/status - summary status",
 		"/install - install menu",
 		"/uninstall - uninstall menu",
 		"/install_tools - install base tools",
@@ -241,7 +238,6 @@ func mainMenuText() string {
 func mainReplyKeyboard() tgbotapi.ReplyKeyboardMarkup {
 	keyboard := tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/status 📊"),
 			tgbotapi.NewKeyboardButton("/monitor 📈"),
 			tgbotapi.NewKeyboardButton("/ops 🛠️"),
 		),

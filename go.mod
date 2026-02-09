@@ -1,4 +1,4 @@
-module vps-telegram-bot
+module github.com/killua525/AiTestCode
 
 go 1.21
 

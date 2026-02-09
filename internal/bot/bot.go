@@ -8,9 +8,9 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"vps-telegram-bot/internal/config"
-	"vps-telegram-bot/internal/monitor"
-	"vps-telegram-bot/internal/ops"
+	"github.com/killua525/AiTestCode/internal/config"
+	"github.com/killua525/AiTestCode/internal/monitor"
+	"github.com/killua525/AiTestCode/internal/ops"
 )
 
 type Bot struct {

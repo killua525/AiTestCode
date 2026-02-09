@@ -16,8 +16,11 @@ Configuration (environment variables):
 How to run:
 - Install Go 1.21+
 - Set the environment variables above
-- Run: go mod tidy
-- Run: go run ./cmd/bot
+- Option A (go install): go install github.com/killua525/AiTestCode/cmd/bot@latest
+- Run: bot
+- Option B (local dev):
+	- go mod tidy
+	- go run ./cmd/bot
 
 Notes:
 - Operations use apt-get and require root permissions.

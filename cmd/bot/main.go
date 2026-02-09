@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"vps-telegram-bot/internal/bot"
-	"vps-telegram-bot/internal/config"
+	"github.com/killua525/AiTestCode/internal/bot"
+	"github.com/killua525/AiTestCode/internal/config"
 )
 
 func main() {

@@ -63,13 +63,13 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 	text := strings.TrimSpace(message.Text)
 	switch {
 	case strings.HasPrefix(text, "/start"):
-		b.replyWithKeyboard(message.Chat.ID, mainMenuText(), mainReplyKeyboard(), message.MessageID)
+		b.replyWithRemoveKeyboard(message.Chat.ID, mainMenuText(), message.MessageID)
 	case strings.HasPrefix(text, "/help"):
-		b.replyWithKeyboard(message.Chat.ID, helpText(), mainReplyKeyboard(), message.MessageID)
+		b.replyWithRemoveKeyboard(message.Chat.ID, helpText(), message.MessageID)
 	case strings.HasPrefix(text, "/monitor"):
-		b.replyWithKeyboard(message.Chat.ID, "*监控概览*", mainReplyKeyboard(), message.MessageID)
+		b.replyWithRemoveKeyboard(message.Chat.ID, "*监控概览*", message.MessageID)
 	case strings.HasPrefix(text, "/ops"):
-		b.replyWithKeyboard(message.Chat.ID, "*运维面板*", mainReplyKeyboard(), message.MessageID)
+		b.replyWithRemoveKeyboard(message.Chat.ID, "*运维面板*", message.MessageID)
 	case strings.HasPrefix(text, "/status"):
 		b.handleStatus(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/install_tools"):
@@ -77,7 +77,7 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 	case strings.HasPrefix(text, "/list_tools"):
 		b.handleListTools(message.Chat.ID, message.MessageID)
 	default:
-		b.replyWithKeyboard(message.Chat.ID, "Unknown command. Use /help", mainReplyKeyboard(), message.MessageID)
+		b.replyWithRemoveKeyboard(message.Chat.ID, "Unknown command. Use /help", message.MessageID)
 	}
 }
 
@@ -99,13 +99,13 @@ func (b *Bot) reply(chatID int64, text string, replyTo int) {
 	}
 }
 
-func (b *Bot) replyWithKeyboard(chatID int64, text string, keyboard tgbotapi.ReplyKeyboardMarkup, replyTo int) {
+func (b *Bot) replyWithRemoveKeyboard(chatID int64, text string, replyTo int) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
 	if replyTo > 0 {
 		msg.ReplyToMessageID = replyTo
 	}
-	msg.ReplyMarkup = keyboard
+	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
 	if _, err := b.api.Send(msg); err != nil {
 		b.logger.Printf("send message error: %v", err)
 	}
@@ -199,24 +199,4 @@ func mainMenuText() string {
 		"*VPS 管理机器人*",
 		"请选择功能模块：",
 	}, "\n")
-}
-
-func mainReplyKeyboard() tgbotapi.ReplyKeyboardMarkup {
-	keyboard := tgbotapi.NewReplyKeyboard(
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/status 📊"),
-			tgbotapi.NewKeyboardButton("/monitor 📈"),
-			tgbotapi.NewKeyboardButton("/ops 🛠️"),
-		),
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/install_tools 📦"),
-			tgbotapi.NewKeyboardButton("/list_tools 📋"),
-		),
-		tgbotapi.NewKeyboardButtonRow(
-			tgbotapi.NewKeyboardButton("/help ❓"),
-		),
-	)
-	keyboard.ResizeKeyboard = true
-	keyboard.OneTimeKeyboard = false
-	return keyboard
 }

@@ -45,12 +45,10 @@ func (b *Bot) Run() error {
 
 	updates := b.api.GetUpdatesChan(updateCfg)
 	for update := range updates {
-		switch {
-		case update.Message != nil:
-			b.handleMessage(update.Message)
-		case update.CallbackQuery != nil:
-			b.handleCallback(update.CallbackQuery)
+		if update.Message == nil {
+			continue
 		}
+		b.handleMessage(update.Message)
 	}
 
 	return nil
@@ -65,13 +63,13 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 	text := strings.TrimSpace(message.Text)
 	switch {
 	case strings.HasPrefix(text, "/start"):
-		b.replyWithMenu(message.Chat.ID, mainMenuText(), mainMenuKeyboard(), message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, mainMenuText(), mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/help"):
-		b.replyWithMenu(message.Chat.ID, helpText(), mainMenuKeyboard(), message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, helpText(), mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/monitor"):
-		b.replyWithMenu(message.Chat.ID, "*监控面板*", monitorKeyboard(), message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, "*监控概览*", mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/ops"):
-		b.replyWithMenu(message.Chat.ID, "*运维面板*", opsKeyboard(), message.MessageID)
+		b.replyWithKeyboard(message.Chat.ID, "*运维面板*", mainReplyKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/status"):
 		b.handleStatus(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/install_tools"):
@@ -79,34 +77,7 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 	case strings.HasPrefix(text, "/list_tools"):
 		b.handleListTools(message.Chat.ID, message.MessageID)
 	default:
-		b.replyWithMenu(message.Chat.ID, "Unknown command. Use /help", mainMenuKeyboard(), message.MessageID)
-	}
-}
-
-func (b *Bot) handleCallback(query *tgbotapi.CallbackQuery) {
-	if !b.isAllowed(query.Message.Chat.ID) {
-		b.answerCallback(query.ID, "Unauthorized")
-		return
-	}
-
-	switch query.Data {
-	case "menu_main":
-		b.editMenu(query.Message, mainMenuText(), mainMenuKeyboard())
-	case "menu_monitor":
-		b.editMenu(query.Message, "*监控面板*", monitorKeyboard())
-	case "menu_ops":
-		b.editMenu(query.Message, "*运维面板*", opsKeyboard())
-	case "monitor_status":
-		b.answerCallback(query.ID, "正在获取状态...")
-		b.handleStatus(query.Message.Chat.ID, 0)
-	case "ops_install_tools":
-		b.answerCallback(query.ID, "开始安装工具...")
-		b.handleInstallTools(query.Message.Chat.ID, 0)
-	case "ops_list_tools":
-		b.answerCallback(query.ID, "获取工具列表...")
-		b.handleListTools(query.Message.Chat.ID, 0)
-	default:
-		b.answerCallback(query.ID, "Unknown action")
+		b.replyWithKeyboard(message.Chat.ID, "Unknown command. Use /help", mainReplyKeyboard(), message.MessageID)
 	}
 }
 
@@ -128,7 +99,7 @@ func (b *Bot) reply(chatID int64, text string, replyTo int) {
 	}
 }
 
-func (b *Bot) replyWithMenu(chatID int64, text string, keyboard tgbotapi.InlineKeyboardMarkup, replyTo int) {
+func (b *Bot) replyWithKeyboard(chatID int64, text string, keyboard tgbotapi.ReplyKeyboardMarkup, replyTo int) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
 	if replyTo > 0 {
@@ -137,22 +108,6 @@ func (b *Bot) replyWithMenu(chatID int64, text string, keyboard tgbotapi.InlineK
 	msg.ReplyMarkup = keyboard
 	if _, err := b.api.Send(msg); err != nil {
 		b.logger.Printf("send message error: %v", err)
-	}
-}
-
-func (b *Bot) editMenu(message *tgbotapi.Message, text string, keyboard tgbotapi.InlineKeyboardMarkup) {
-	edit := tgbotapi.NewEditMessageText(message.Chat.ID, message.MessageID, text)
-	edit.ParseMode = "Markdown"
-	edit.ReplyMarkup = &keyboard
-	if _, err := b.api.Send(edit); err != nil {
-		b.logger.Printf("edit message error: %v", err)
-	}
-}
-
-func (b *Bot) answerCallback(id string, text string) {
-	cb := tgbotapi.NewCallback(id, text)
-	if _, err := b.api.Request(cb); err != nil {
-		b.logger.Printf("callback error: %v", err)
 	}
 }
 
@@ -246,34 +201,22 @@ func mainMenuText() string {
 	}, "\n")
 }
 
-func mainMenuKeyboard() tgbotapi.InlineKeyboardMarkup {
-	return tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("📈 监控", "menu_monitor"),
-			tgbotapi.NewInlineKeyboardButtonData("🛠️ 运维", "menu_ops"),
+func mainReplyKeyboard() tgbotapi.ReplyKeyboardMarkup {
+	keyboard := tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/status"),
+			tgbotapi.NewKeyboardButton("/monitor"),
+			tgbotapi.NewKeyboardButton("/ops"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/install_tools"),
+			tgbotapi.NewKeyboardButton("/list_tools"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/help"),
 		),
 	)
-}
-
-func monitorKeyboard() tgbotapi.InlineKeyboardMarkup {
-	return tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🧾 概览", "monitor_status"),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("⬅️ 返回", "menu_main"),
-		),
-	)
-}
-
-func opsKeyboard() tgbotapi.InlineKeyboardMarkup {
-	return tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("📦 安装基础工具", "ops_install_tools"),
-			tgbotapi.NewInlineKeyboardButtonData("📋 工具列表", "ops_list_tools"),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("⬅️ 返回", "menu_main"),
-		),
-	)
+	keyboard.ResizeKeyboard = true
+	keyboard.OneTimeKeyboard = false
+	return keyboard
 }

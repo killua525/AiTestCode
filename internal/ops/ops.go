@@ -20,21 +20,13 @@ func InstallBaseTools() (string, error) {
 
 	cmds := [][]string{
 		{"apt-get", "update"},
-		{"apt-get", "install", "-y", "vim", "curl", "htop"},
+		append([]string{"apt-get", "install", "-y"}, BaseTools()...),
 	}
 	return runCommands(cmds)
 }
 
-func UpdateSystem() (string, error) {
-	if os.Geteuid() != 0 {
-		return "", errors.New("must run as root")
-	}
-
-	cmds := [][]string{
-		{"apt-get", "update"},
-		{"apt-get", "upgrade", "-y"},
-	}
-	return runCommands(cmds)
+func BaseTools() []string {
+	return []string{"vim", "curl", "htop"}
 }
 
 func runCommands(cmds [][]string) (string, error) {

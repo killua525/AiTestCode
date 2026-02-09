@@ -74,10 +74,10 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 		b.replyWithMenu(message.Chat.ID, "*运维面板*", opsKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/status"):
 		b.handleStatus(message.Chat.ID, message.MessageID)
-	case strings.HasPrefix(text, "/update"):
-		b.handleUpdate(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/install_tools"):
 		b.handleInstallTools(message.Chat.ID, message.MessageID)
+	case strings.HasPrefix(text, "/list_tools"):
+		b.handleListTools(message.Chat.ID, message.MessageID)
 	default:
 		b.replyWithMenu(message.Chat.ID, "Unknown command. Use /help", mainMenuKeyboard(), message.MessageID)
 	}
@@ -99,12 +99,12 @@ func (b *Bot) handleCallback(query *tgbotapi.CallbackQuery) {
 	case "monitor_status":
 		b.answerCallback(query.ID, "正在获取状态...")
 		b.handleStatus(query.Message.Chat.ID, 0)
-	case "ops_update":
-		b.answerCallback(query.ID, "开始更新...")
-		b.handleUpdate(query.Message.Chat.ID, 0)
 	case "ops_install_tools":
 		b.answerCallback(query.ID, "开始安装工具...")
 		b.handleInstallTools(query.Message.Chat.ID, 0)
+	case "ops_list_tools":
+		b.answerCallback(query.ID, "获取工具列表...")
+		b.handleListTools(query.Message.Chat.ID, 0)
 	default:
 		b.answerCallback(query.ID, "Unknown action")
 	}
@@ -205,18 +205,12 @@ func (b *Bot) handleUptime(chatID int64, replyTo int) {
 	b.reply(chatID, fmt.Sprintf("Uptime: %s", uptime), replyTo)
 }
 
-func (b *Bot) handleUpdate(chatID int64, replyTo int) {
-	b.reply(chatID, "Running system update...", replyTo)
-	out, err := ops.UpdateSystem()
-	if err != nil {
-		b.reply(chatID, fmt.Sprintf("Update failed: %v\n%s", err, out), replyTo)
-		return
-	}
-	b.reply(chatID, "Update finished.", replyTo)
-}
-
 func (b *Bot) handleInstallTools(chatID int64, replyTo int) {
-	b.reply(chatID, "Installing base tools...", replyTo)
+	tools := strings.Join(ops.BaseTools(), ", ")
+	if tools == "" {
+		tools = "(empty)"
+	}
+	b.reply(chatID, fmt.Sprintf("Installing base tools: %s", tools), replyTo)
 	out, err := ops.InstallBaseTools()
 	if err != nil {
 		b.reply(chatID, fmt.Sprintf("Install failed: %v\n%s", err, out), replyTo)
@@ -225,14 +219,23 @@ func (b *Bot) handleInstallTools(chatID int64, replyTo int) {
 	b.reply(chatID, "Install finished.", replyTo)
 }
 
+func (b *Bot) handleListTools(chatID int64, replyTo int) {
+	tools := ops.BaseTools()
+	if len(tools) == 0 {
+		b.reply(chatID, "Base tools list is empty.", replyTo)
+		return
+	}
+	b.reply(chatID, fmt.Sprintf("Base tools: %s", strings.Join(tools, ", ")), replyTo)
+}
+
 func helpText() string {
 	return strings.Join([]string{
 		"*VPS Bot Commands*",
 		"/monitor - monitoring panel",
 		"/ops - ops panel",
 		"/status - summary status",
-		"/update - apt update/upgrade",
 		"/install_tools - install vim/curl/htop",
+		"/list_tools - show base tools list",
 	}, "\n")
 }
 
@@ -266,8 +269,8 @@ func monitorKeyboard() tgbotapi.InlineKeyboardMarkup {
 func opsKeyboard() tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🔄 更新系统", "ops_update"),
 			tgbotapi.NewInlineKeyboardButtonData("📦 安装基础工具", "ops_install_tools"),
+			tgbotapi.NewInlineKeyboardButtonData("📋 工具列表", "ops_list_tools"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("⬅️ 返回", "menu_main"),

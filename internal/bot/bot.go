@@ -74,14 +74,6 @@ func (b *Bot) handleMessage(message *tgbotapi.Message) {
 		b.replyWithMenu(message.Chat.ID, "*运维面板*", opsKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/status"):
 		b.handleStatus(message.Chat.ID, message.MessageID)
-	case strings.HasPrefix(text, "/cpu"):
-		b.handleCPU(message.Chat.ID, message.MessageID)
-	case strings.HasPrefix(text, "/mem"):
-		b.handleMem(message.Chat.ID, message.MessageID)
-	case strings.HasPrefix(text, "/disk"):
-		b.handleDisk(message.Chat.ID, message.MessageID)
-	case strings.HasPrefix(text, "/uptime"):
-		b.handleUptime(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/update"):
 		b.handleUpdate(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/install_tools"):
@@ -107,18 +99,6 @@ func (b *Bot) handleCallback(query *tgbotapi.CallbackQuery) {
 	case "monitor_status":
 		b.answerCallback(query.ID, "正在获取状态...")
 		b.handleStatus(query.Message.Chat.ID, 0)
-	case "monitor_cpu":
-		b.answerCallback(query.ID, "获取CPU...")
-		b.handleCPU(query.Message.Chat.ID, 0)
-	case "monitor_mem":
-		b.answerCallback(query.ID, "获取内存...")
-		b.handleMem(query.Message.Chat.ID, 0)
-	case "monitor_disk":
-		b.answerCallback(query.ID, "获取磁盘...")
-		b.handleDisk(query.Message.Chat.ID, 0)
-	case "monitor_uptime":
-		b.answerCallback(query.ID, "获取运行时间...")
-		b.handleUptime(query.Message.Chat.ID, 0)
 	case "ops_update":
 		b.answerCallback(query.ID, "开始更新...")
 		b.handleUpdate(query.Message.Chat.ID, 0)
@@ -251,10 +231,6 @@ func helpText() string {
 		"/monitor - monitoring panel",
 		"/ops - ops panel",
 		"/status - summary status",
-		"/cpu - CPU usage",
-		"/mem - memory usage",
-		"/disk - disk usage",
-		"/uptime - uptime",
 		"/update - apt update/upgrade",
 		"/install_tools - install vim/curl/htop",
 	}, "\n")
@@ -280,14 +256,6 @@ func monitorKeyboard() tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("🧾 概览", "monitor_status"),
-			tgbotapi.NewInlineKeyboardButtonData("🧠 CPU", "monitor_cpu"),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("💾 内存", "monitor_mem"),
-			tgbotapi.NewInlineKeyboardButtonData("📦 磁盘", "monitor_disk"),
-		),
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("⏱️ 运行时间", "monitor_uptime"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("⬅️ 返回", "menu_main"),

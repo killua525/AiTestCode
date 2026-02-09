@@ -58,36 +58,36 @@ func (b *Bot) Run() error {
 
 func (b *Bot) handleMessage(message *tgbotapi.Message) {
 	if !b.isAllowed(message.Chat.ID) {
-		b.reply(message.Chat.ID, "Unauthorized")
+		b.reply(message.Chat.ID, "Unauthorized", message.MessageID)
 		return
 	}
 
 	text := strings.TrimSpace(message.Text)
 	switch {
 	case strings.HasPrefix(text, "/start"):
-		b.replyWithMenu(message.Chat.ID, mainMenuText(), mainMenuKeyboard())
+		b.replyWithMenu(message.Chat.ID, mainMenuText(), mainMenuKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/help"):
-		b.replyWithMenu(message.Chat.ID, helpText(), mainMenuKeyboard())
+		b.replyWithMenu(message.Chat.ID, helpText(), mainMenuKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/monitor"):
-		b.replyWithMenu(message.Chat.ID, "*监控面板*", monitorKeyboard())
+		b.replyWithMenu(message.Chat.ID, "*监控面板*", monitorKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/ops"):
-		b.replyWithMenu(message.Chat.ID, "*运维面板*", opsKeyboard())
+		b.replyWithMenu(message.Chat.ID, "*运维面板*", opsKeyboard(), message.MessageID)
 	case strings.HasPrefix(text, "/status"):
-		b.handleStatus(message.Chat.ID)
+		b.handleStatus(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/cpu"):
-		b.handleCPU(message.Chat.ID)
+		b.handleCPU(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/mem"):
-		b.handleMem(message.Chat.ID)
+		b.handleMem(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/disk"):
-		b.handleDisk(message.Chat.ID)
+		b.handleDisk(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/uptime"):
-		b.handleUptime(message.Chat.ID)
+		b.handleUptime(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/update"):
-		b.handleUpdate(message.Chat.ID)
+		b.handleUpdate(message.Chat.ID, message.MessageID)
 	case strings.HasPrefix(text, "/install_tools"):
-		b.handleInstallTools(message.Chat.ID)
+		b.handleInstallTools(message.Chat.ID, message.MessageID)
 	default:
-		b.replyWithMenu(message.Chat.ID, "Unknown command. Use /help", mainMenuKeyboard())
+		b.replyWithMenu(message.Chat.ID, "Unknown command. Use /help", mainMenuKeyboard(), message.MessageID)
 	}
 }
 
@@ -106,25 +106,25 @@ func (b *Bot) handleCallback(query *tgbotapi.CallbackQuery) {
 		b.editMenu(query.Message, "*运维面板*", opsKeyboard())
 	case "monitor_status":
 		b.answerCallback(query.ID, "正在获取状态...")
-		b.handleStatus(query.Message.Chat.ID)
+		b.handleStatus(query.Message.Chat.ID, 0)
 	case "monitor_cpu":
 		b.answerCallback(query.ID, "获取CPU...")
-		b.handleCPU(query.Message.Chat.ID)
+		b.handleCPU(query.Message.Chat.ID, 0)
 	case "monitor_mem":
 		b.answerCallback(query.ID, "获取内存...")
-		b.handleMem(query.Message.Chat.ID)
+		b.handleMem(query.Message.Chat.ID, 0)
 	case "monitor_disk":
 		b.answerCallback(query.ID, "获取磁盘...")
-		b.handleDisk(query.Message.Chat.ID)
+		b.handleDisk(query.Message.Chat.ID, 0)
 	case "monitor_uptime":
 		b.answerCallback(query.ID, "获取运行时间...")
-		b.handleUptime(query.Message.Chat.ID)
+		b.handleUptime(query.Message.Chat.ID, 0)
 	case "ops_update":
 		b.answerCallback(query.ID, "开始更新...")
-		b.handleUpdate(query.Message.Chat.ID)
+		b.handleUpdate(query.Message.Chat.ID, 0)
 	case "ops_install_tools":
 		b.answerCallback(query.ID, "开始安装工具...")
-		b.handleInstallTools(query.Message.Chat.ID)
+		b.handleInstallTools(query.Message.Chat.ID, 0)
 	default:
 		b.answerCallback(query.ID, "Unknown action")
 	}
@@ -137,17 +137,23 @@ func (b *Bot) isAllowed(chatID int64) bool {
 	return chatID == b.cfg.AdminChatID
 }
 
-func (b *Bot) reply(chatID int64, text string) {
+func (b *Bot) reply(chatID int64, text string, replyTo int) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
+	if replyTo > 0 {
+		msg.ReplyToMessageID = replyTo
+	}
 	if _, err := b.api.Send(msg); err != nil {
 		b.logger.Printf("send message error: %v", err)
 	}
 }
 
-func (b *Bot) replyWithMenu(chatID int64, text string, keyboard tgbotapi.InlineKeyboardMarkup) {
+func (b *Bot) replyWithMenu(chatID int64, text string, keyboard tgbotapi.InlineKeyboardMarkup, replyTo int) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "Markdown"
+	if replyTo > 0 {
+		msg.ReplyToMessageID = replyTo
+	}
 	msg.ReplyMarkup = keyboard
 	if _, err := b.api.Send(msg); err != nil {
 		b.logger.Printf("send message error: %v", err)
@@ -170,7 +176,7 @@ func (b *Bot) answerCallback(id string, text string) {
 	}
 }
 
-func (b *Bot) handleStatus(chatID int64) {
+func (b *Bot) handleStatus(chatID int64, replyTo int) {
 	cpu, _ := monitor.CPUPercent()
 	mem, _ := monitor.MemoryUsage()
 	disk, _ := monitor.DiskUsage("/")
@@ -180,63 +186,63 @@ func (b *Bot) handleStatus(chatID int64) {
 		"*Status*\nCPU: %s\nMemory: %s\nDisk: %s\nUptime: %s",
 		cpu, mem, disk, uptime,
 	)
-	b.reply(chatID, text)
+	b.reply(chatID, text, replyTo)
 }
 
-func (b *Bot) handleCPU(chatID int64) {
+func (b *Bot) handleCPU(chatID int64, replyTo int) {
 	cpu, err := monitor.CPUPercent()
 	if err != nil {
-		b.reply(chatID, fmt.Sprintf("CPU error: %v", err))
+		b.reply(chatID, fmt.Sprintf("CPU error: %v", err), replyTo)
 		return
 	}
-	b.reply(chatID, fmt.Sprintf("CPU: %s", cpu))
+	b.reply(chatID, fmt.Sprintf("CPU: %s", cpu), replyTo)
 }
 
-func (b *Bot) handleMem(chatID int64) {
+func (b *Bot) handleMem(chatID int64, replyTo int) {
 	mem, err := monitor.MemoryUsage()
 	if err != nil {
-		b.reply(chatID, fmt.Sprintf("Memory error: %v", err))
+		b.reply(chatID, fmt.Sprintf("Memory error: %v", err), replyTo)
 		return
 	}
-	b.reply(chatID, fmt.Sprintf("Memory: %s", mem))
+	b.reply(chatID, fmt.Sprintf("Memory: %s", mem), replyTo)
 }
 
-func (b *Bot) handleDisk(chatID int64) {
+func (b *Bot) handleDisk(chatID int64, replyTo int) {
 	disk, err := monitor.DiskUsage("/")
 	if err != nil {
-		b.reply(chatID, fmt.Sprintf("Disk error: %v", err))
+		b.reply(chatID, fmt.Sprintf("Disk error: %v", err), replyTo)
 		return
 	}
-	b.reply(chatID, fmt.Sprintf("Disk: %s", disk))
+	b.reply(chatID, fmt.Sprintf("Disk: %s", disk), replyTo)
 }
 
-func (b *Bot) handleUptime(chatID int64) {
+func (b *Bot) handleUptime(chatID int64, replyTo int) {
 	uptime, err := monitor.Uptime()
 	if err != nil {
-		b.reply(chatID, fmt.Sprintf("Uptime error: %v", err))
+		b.reply(chatID, fmt.Sprintf("Uptime error: %v", err), replyTo)
 		return
 	}
-	b.reply(chatID, fmt.Sprintf("Uptime: %s", uptime))
+	b.reply(chatID, fmt.Sprintf("Uptime: %s", uptime), replyTo)
 }
 
-func (b *Bot) handleUpdate(chatID int64) {
-	b.reply(chatID, "Running system update...")
+func (b *Bot) handleUpdate(chatID int64, replyTo int) {
+	b.reply(chatID, "Running system update...", replyTo)
 	out, err := ops.UpdateSystem()
 	if err != nil {
-		b.reply(chatID, fmt.Sprintf("Update failed: %v\n%s", err, out))
+		b.reply(chatID, fmt.Sprintf("Update failed: %v\n%s", err, out), replyTo)
 		return
 	}
-	b.reply(chatID, "Update finished.")
+	b.reply(chatID, "Update finished.", replyTo)
 }
 
-func (b *Bot) handleInstallTools(chatID int64) {
-	b.reply(chatID, "Installing base tools...")
+func (b *Bot) handleInstallTools(chatID int64, replyTo int) {
+	b.reply(chatID, "Installing base tools...", replyTo)
 	out, err := ops.InstallBaseTools()
 	if err != nil {
-		b.reply(chatID, fmt.Sprintf("Install failed: %v\n%s", err, out))
+		b.reply(chatID, fmt.Sprintf("Install failed: %v\n%s", err, out), replyTo)
 		return
 	}
-	b.reply(chatID, "Install finished.")
+	b.reply(chatID, "Install finished.", replyTo)
 }
 
 func helpText() string {
